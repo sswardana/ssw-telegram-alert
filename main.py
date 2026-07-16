@@ -7,61 +7,79 @@ CHAT_ID = os.getenv("CHAT_ID")
 
 SSW_URL = "https://crypto-mcp-production-61ca.up.railway.app/ssw15m"
 
-sent = set()
+sent = {}
+COOLDOWN = 1800  # 30 menit
 
 
 def send_message(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-    requests.post(
-        url,
-        json={
-            "chat_id": CHAT_ID,
-            "text": text
-        }
-    )
+    try:
+        requests.post(
+            url,
+            json={
+                "chat_id": CHAT_ID,
+                "text": text,
+                "parse_mode": "HTML",
+                "disable_web_page_preview": False
+            },
+            timeout=10
+        )
+
+    except Exception as e:
+        print(f"Telegram Error : {e}")
 
 
 def check_signal():
 
-    data = requests.get(
-        SSW_URL,
-        timeout=10
-    ).json()
+    response = requests.get(
+    SSW_URL,
+    timeout=10
+)
+
+response.raise_for_status()
+
+data = response.json()
 
     signals = data.get("long", []) + data.get("short", [])
 
     for s in signals:
 
-        key = (
-            s["symbol"],
-            s["signal"],
-            s["entry"]
-        )
+        key = f"{s['symbol']}_{s['signal']}"
+        now = time.time()
 
         if key in sent:
-            continue
+            if now - sent[key] < COOLDOWN:
+                continue
 
         if s["confidence"] >= 70:
 
             msg = f"""
-🚨 SSW SIGNAL
+🚨 <b>SSW SCALPING SIGNAL</b>
 
-{s['signal']} {s['symbol']}
+{'🟢' if s['signal']=='LONG' else '🔴'} <b>{s['signal']} {s['symbol']}</b>
 
-Entry: {s['entry']}
-TP1: {s['tp1']}
-TP2: {s['tp2']}
-SL: {s['sl']}
+━━━━━━━━━━━━━━━━
 
-Confidence: {s['confidence']}%
-Risk: {s['risk']}
-Quality: {s['entry_quality']}
+💰 <b>Entry</b> : {s['entry']}
+
+🎯 <b>TP1</b> : {s['tp1']}
+🎯 <b>TP2</b> : {s['tp2']}
+
+🛑 <b>SL</b> : {s['sl']}
+
+━━━━━━━━━━━━━━━━
+
+📊 <b>Confidence</b> : {s['confidence']}%
+⚠️ <b>Risk</b> : {s['risk']}
+⭐ <b>Quality</b> : {s['entry_quality']}
+
+📈 <a href="https://www.tradingview.com/chart/?symbol=BINANCE:{s['symbol']}">Open TradingView</a>
 """
 
             send_message(msg)
 
-            sent.add(key)
+            sent[key] = now
 
 
 
