@@ -83,6 +83,8 @@ def check_signal():
             sent[key] = now
 
 
+send_message("🚀 Test SSW Bot Berhasil")
+
 while True:
 
     try:
