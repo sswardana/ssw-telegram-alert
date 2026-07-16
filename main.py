@@ -42,7 +42,7 @@ def check_signal():
         if key in sent:
             continue
 
-        if s["confidence"] >= 0:
+        if s["confidence"] >= 70:
 
             msg = f"""
 🚨 SSW SIGNAL
