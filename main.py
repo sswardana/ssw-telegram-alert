@@ -5,6 +5,9 @@ import os
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
+if not BOT_TOKEN or not CHAT_ID:
+    raise RuntimeError("BOT_TOKEN atau CHAT_ID belum diset.")
+
 SSW_URL = "https://crypto-mcp-production-61ca.up.railway.app/ssw15m"
 
 sent = {}
@@ -25,21 +28,20 @@ def send_message(text):
             },
             timeout=10
         )
-
     except Exception as e:
-        print(f"Telegram Error : {e}")
+        print(f"Telegram Error: {e}")
 
 
 def check_signal():
 
     response = requests.get(
-    SSW_URL,
-    timeout=10
-)
+        SSW_URL,
+        timeout=10
+    )
 
-response.raise_for_status()
+    response.raise_for_status()
 
-data = response.json()
+    data = response.json()
 
     signals = data.get("long", []) + data.get("short", [])
 
@@ -48,16 +50,15 @@ data = response.json()
         key = f"{s['symbol']}_{s['signal']}"
         now = time.time()
 
-        if key in sent:
-            if now - sent[key] < COOLDOWN:
-                continue
+        if key in sent and (now - sent[key] < COOLDOWN):
+            continue
 
         if s["confidence"] >= 70:
 
             msg = f"""
 🚨 <b>SSW SCALPING SIGNAL</b>
 
-{'🟢' if s['signal']=='LONG' else '🔴'} <b>{s['signal']} {s['symbol']}</b>
+{'🟢' if s['signal'] == 'LONG' else '🔴'} <b>{s['signal']} {s['symbol']}</b>
 
 ━━━━━━━━━━━━━━━━
 
@@ -71,8 +72,8 @@ data = response.json()
 ━━━━━━━━━━━━━━━━
 
 📊 <b>Confidence</b> : {s['confidence']}%
-⚠️ <b>Risk</b> : {s['risk']}
-⭐ <b>Quality</b> : {s['entry_quality']}
+⚠️ <b>Risk</b> : {s.get('risk', 'UNKNOWN')}
+⭐ <b>Quality</b> : {s.get('entry_quality', 'N/A')}
 
 📈 <a href="https://www.tradingview.com/chart/?symbol=BINANCE:{s['symbol']}">Open TradingView</a>
 """
@@ -80,7 +81,6 @@ data = response.json()
             send_message(msg)
 
             sent[key] = now
-
 
 
 while True:
